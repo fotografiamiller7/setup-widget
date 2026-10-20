@@ -1,0 +1,14 @@
+# Binários baixados pelo setup.ps1 (NuGet)
+lib/
+_dl/
+
+# Estado local do usuário
+config.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Arquivos temporários
+_*.txt
+_*.png
