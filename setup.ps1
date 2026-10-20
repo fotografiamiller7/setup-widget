@@ -5,9 +5,11 @@
 #
 # Uso: botão direito > "Executar com o PowerShell"  (ou: powershell -ExecutionPolicy Bypass -File setup.ps1)
 $ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 $Base = Split-Path -Parent $PSCommandPath
 $Lib  = Join-Path $Base 'lib'
-$Dl   = Join-Path $Base '_dl'
+$Dl   = Join-Path $env:TEMP 'SetupWidget_dl'   # caminho curto, evita o limite de 260 caracteres
 New-Item -ItemType Directory -Force $Lib, $Dl | Out-Null
 
 # ---------- 1. Python ----------
@@ -29,7 +31,7 @@ while ($queue.Count -gt 0) {
     $zip = "$Dl\$p-$v.zip"; $dir = "$Dl\$p-$v"
     if (-not (Test-Path $dir)) {
         try { Invoke-WebRequest "https://www.nuget.org/api/v2/package/$p/$v" -OutFile $zip } catch { Write-Host "  falha ao baixar $p $v" -ForegroundColor Yellow; continue }
-        Expand-Archive $zip $dir -Force
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $dir)
     }
     $copied = $false
     foreach ($tf in $prefs) {
@@ -65,7 +67,7 @@ Remove-Item $Dl -Recurse -Force -ErrorAction SilentlyContinue
 
 # ---------- 3. PawnIO ----------
 Write-Host "[3/3] Verificando driver PawnIO..." -ForegroundColor Cyan
-$pawn = Get-ChildItem "$env:SystemRoot\System32\drivers" -Filter 'PawnIO*.sys' -ErrorAction SilentlyContinue
+$pawn = (Test-Path "$env:ProgramFiles\PawnIO") -or (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -eq 'PawnIO')
 if ($pawn) { Write-Host "  PawnIO já instalado." }
 else {
     Write-Host "  Instalando PawnIO via winget (vai pedir permissão de administrador)..."
